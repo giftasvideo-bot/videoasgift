@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    body { font-family: sans-serif; text-align: center; background: #f0f2f5; padding: 10px; }
+    .container { max-width: 600px; margin: auto; background: white; padding: 20px; border-radius: 15px; box-shadow: 0 10px 15px rgba(0,0,0,0.1); }
+    .video-wrapper { width: 100%; border-radius: 15px; overflow: hidden; background: #000; min-height: 200px; display: flex; align-items: center; justify-content: center; }
+    video { width: 100%; display: block; max-height: 70vh; }
+    .btn { background: #6c5ce7; color: white; padding: 15px; border: none; border-radius: 50px; cursor: pointer; width: 100%; font-size: 18px; margin-top: 15px; font-weight: bold; text-decoration: none; display: inline-block; }
+    .hidden { display: none; }
+    #loader { display: none; margin-top: 20px; color: #6c5ce7; font-weight: bold; }
+    #downloadProgress { font-size: 14px; color: #6c5ce7; margin-top: 5px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div id="msg">🎁 Opening your gift... <div id="downloadProgress"></div></div>
+
+    <!-- RECEIVER VIEW -->
+    <div id="receiver" class="hidden">
+      <h2 style="color: #6c5ce7;">💝 Your Video Message is Here</h2>
+      <div class="video-wrapper">
+        <video id="mainVideo" controls playsinline style="background: black;"></video>
+      </div>
+      <button id="downloadBtn" class="btn">📥 Download Video</button>
+    </div>
+
+    <!-- SENDER VIEW -->
+    <div id="sender" class="hidden">
+      <h2>🎁 Create a Gift</h2>
+      <p>Upload a video message for this QR code.</p>
+      <input type="file" id="fileIn" accept="video/*" style="display:none">
+      <button class="btn" onclick="document.getElementById('fileIn').click()">Choose Video</button>
+    </div>
+
+    <!-- LOADING VIEW -->
+    <div id="loader">🚀 Uploading... Please wait.</div>
+  </div>
+
+  <script>
+    const scriptURL = "https://script.google.com/macros/s/AKfycbzI6s7e4SxsIHMu9gAoXUY26Yxp7Ac4ZfbmA3dnqA0ocEKstivV2fkuDqMclDoL0aJoxA/exec";
+    
+    const urlParams = new URLSearchParams(window.location.search);
+    const giftId = urlParams.get('id');
+
+    async function init() {
+      if (!giftId) {
+        document.getElementById('msg').innerText = "❌ Missing ID in URL (Add ?id=yourid)";
+        return;
+      }
+
+      try {
+        // 1. Check if video exists
+        const response = await fetch(`${scriptURL}?giftId=${giftId}`, {
+          method: "GET",
+          redirect: "follow"
+        });
+        
+        const res = await response.json();
+
+        if (res.status === "exists") {
+          document.getElementById('downloadProgress').innerText = "Loading video data...";
+          
+          // 2. Fetch the actual video file as a BLOB
+          // This bypasses the Google login screen and allows native playback
+          const videoResponse = await fetch(`https://drive.google.com/uc?export=download&id=${res.fileId}`);
+          
+          if (!videoResponse.ok) throw new Error("Video fetch failed");
+          
+          const blob = await videoResponse.blob();
+          const localUrl = URL.createObjectURL(blob);
+          
+          // 3. Display the video
+          document.getElementById('msg').style.display = 'none';
+          document.getElementById('receiver').classList.remove('hidden');
+          
+          const video = document.getElementById('mainVideo');
+          video.src = localUrl;
+
+          // 4. Setup Download Button (No Google Account needed)
+          const downloadBtn = document.getElementById('downloadBtn');
+          downloadBtn.onclick = function() {
+            const a = document.createElement('a');
+            a.href = localUrl;
+            a.download = `Gift_Video_${giftId}.mp4`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+          };
+
+        } else {
+          document.getElementById('msg').style.display = 'none';
+          document.getElementById('sender').classList.remove('hidden');
+        }
+      } catch (e) {
+        console.error(e);
+        document.getElementById('msg').innerText = "⚠️ Error loading gift. Please refresh.";
+      }
+    }
+
+    // UPLOAD LOGIC
+    document.getElementById('fileIn').onchange = function() {
+      const file = this.files[0];
+      if (!file) return;
+      
+      document.getElementById('sender').classList.add('hidden');
+      document.getElementById('loader').style.display = 'block';
+
+      const reader = new FileReader();
+      reader.onload = async function(e) {
+        const byteData = Array.from(new Uint8Array(e.target.result));
+        
+        const payload = {
+          byteData: byteData,
+          contentType: file.type,
+          giftId: giftId
+        };
+
+        try {
+          await fetch(scriptURL, {
+            method: "POST",
+            body: JSON.stringify(payload),
+            redirect: "follow"
+          });
+          location.reload();
+        } catch (err) {
+          alert("Upload failed. The video might be too large.");
+          location.reload();
+        }
+      };
+      reader.readAsArrayBuffer(file);
+    };
+
+    // Run on start
+    init();
+  </script>
+</body>
+</html>
