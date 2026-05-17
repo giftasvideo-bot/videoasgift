@@ -75,37 +75,42 @@
     const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxbuY3b1i9pO9mMksOMYc3PlxfFrQlU1Glo7osxKVxE9Z51S1umoQCSDc9hjEygpDnrlQ/exec"; 
     const SUCCESS_URL = "https://videogifts.my.canva.site";
 
-    window.onload = function() {
+  window.onload = function() {
         if (!giftId) return;
         document.getElementById('displayId').innerText = "Gift ID: " + giftId;
-        fetch(`${SCRIPT_URL}?id=${giftId}`).then(res => res.json()).then(data => {
-            if (data.url) {
-                document.getElementById('viewSection').classList.remove('hidden');
-                document.getElementById('videoPlayer').src = data.url;
-            } else {
+        fetch(`${SCRIPT_URL}?id=${giftId}`)
+            .then(res => res.json())
+            .then(data => {
+                if (data.url) {
+                    document.getElementById('viewSection').classList.remove('hidden');
+                    document.getElementById('videoPlayer').src = data.url;
+                } else {
+                    document.getElementById('uploadSection').classList.remove('hidden');
+                }
+            })
+            .catch(() => {
                 document.getElementById('uploadSection').classList.remove('hidden');
-            }
-        }).catch(() => document.getElementById('uploadSection').classList.remove('hidden'));
+            });
     };
 
     function uploadVideo() {
         const fileInput = document.getElementById('videoInput');
-        if (!fileInput.files[0]) return alert("Select a video!");
+        if (!fileInput.files[0]) return alert("Please select a video!");
 
         const file = fileInput.files[0];
         const reader = new FileReader();
         
         document.getElementById('uploadSection').style.display = 'none';
         document.getElementById('progressBarContainer').style.display = 'block';
-        document.getElementById('statusMessage').innerText = "🚀 Processing your Forever 27 gift...";
+        document.getElementById('statusMessage').innerText = "🚀 Processing your video... please wait.";
 
         reader.onload = function(e) {
             const base64String = e.target.result.split(',')[1];
             
-            // This 'no-cors' mode is what stops the "fast" error message
+            // FIRE & FORGET: We send the data and don't even check if it 'failed'
             fetch(SCRIPT_URL, {
                 method: 'POST',
-                mode: 'no-cors', 
+                mode: 'no-cors', // This is the shield against CORS errors
                 headers: { 'Content-Type': 'text/plain' },
                 body: JSON.stringify({
                     id: giftId,
@@ -115,16 +120,16 @@
                 })
             });
 
-            // Instead of waiting for a "Failed" signal, we use a 10-second countdown
+            // We move to the success page after 10 seconds, assuming it worked
             let width = 0;
             const timer = setInterval(() => {
-                width += 10;
+                width += 5;
                 document.getElementById('progressBar').style.width = width + "%";
                 if (width >= 100) {
                     clearInterval(timer);
-                    window.location.href = SUCCESS_URL; // Go to Canva no matter what
+                    window.location.href = SUCCESS_URL;
                 }
-            }, 1000); 
+            }, 500); 
         };
         reader.readAsDataURL(file);
     }
