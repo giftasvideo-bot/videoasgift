@@ -1,139 +1,174 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <style>
-    body { font-family: sans-serif; text-align: center; background: #f0f2f5; padding: 10px; }
-    .container { max-width: 600px; margin: auto; background: white; padding: 20px; border-radius: 15px; box-shadow: 0 10px 15px rgba(0,0,0,0.1); }
-    .video-wrapper { width: 100%; border-radius: 15px; overflow: hidden; background: #000; min-height: 200px; display: flex; align-items: center; justify-content: center; }
-    video { width: 100%; display: block; max-height: 70vh; }
-    .btn { background: #6c5ce7; color: white; padding: 15px; border: none; border-radius: 50px; cursor: pointer; width: 100%; font-size: 18px; margin-top: 15px; font-weight: bold; text-decoration: none; display: inline-block; }
-    .hidden { display: none; }
-    #loader { display: none; margin-top: 20px; color: #6c5ce7; font-weight: bold; }
-    #downloadProgress { font-size: 14px; color: #6c5ce7; margin-top: 5px; }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Forever 27 | Video Gift Portal</title>
+    <style>
+        :root { --primary: #6c5ce7; --bg: #f8f9fa; --success: #00b894; --home: #2d3436; }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; padding: 15px; box-sizing: border-box; }
+        .container { background: white; width: 100%; max-width: 450px; padding: 2.5rem; border-radius: 30px; box-shadow: 0 20px 40px rgba(0,0,0,0.1); text-align: center; }
+        .logo { font-weight: bold; color: var(--primary); font-size: 1.8rem; margin-bottom: 0.5rem; }
+        .subtitle { color: #636e72; margin-bottom: 1.5rem; font-size: 0.9rem; }
+        
+        #upload-section, #receiver-section, #error-section, #loading-section, #preview-section { display: none; }
+
+        .video-wrapper { position: relative; width: 100%; background: #000; border-radius: 20px; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.2); margin-bottom: 20px; }
+        video { width: 100%; display: block; object-fit: contain; min-height: 250px; }
+        
+        .btn { background: var(--primary); color: white; border: none; padding: 1.1rem; border-radius: 50px; font-weight: 600; width: 100%; cursor: pointer; font-size: 1rem; text-decoration: none; display: inline-block; box-sizing: border-box; margin-bottom: 10px; transition: 0.3s; }
+        .btn-change { background: #636e72; font-size: 0.9rem; padding: 0.8rem; }
+        .btn-download { background: var(--success); display: none; }
+        .btn-home { background: var(--home); display: none; }
+        .btn:disabled { background: #b2bec3; opacity: 0.7; }
+        
+        /* PROGRESS BAR STYLING */
+        #progress-container { display: none; width: 100%; background-color: #eee; border-radius: 50px; height: 12px; margin-top: 15px; overflow: hidden; }
+        #progress-bar { width: 0%; height: 100%; background-color: var(--primary); transition: width 0.3s; }
+        #percentage { font-size: 1rem; font-weight: bold; color: var(--primary); margin-top: 10px; }
+
+        #status { margin-top: 1.5rem; font-size: 0.9rem; font-weight: 600; min-height: 1.2em; }
+        #sync-message { display:none; background: #f1f0ff; color: #6c5ce7; padding: 20px; border-radius: 20px; border: 1px solid #6c5ce7; margin-bottom: 20px; text-align: left; }
+    </style>
 </head>
 <body>
-  <div class="container">
-    <div id="msg">🎁 Opening your gift... <div id="downloadProgress"></div></div>
 
-    <!-- RECEIVER VIEW -->
-    <div id="receiver" class="hidden">
-      <h2 style="color: #6c5ce7;">💝 Your Video Message is Here</h2>
-      <div class="video-wrapper">
-        <video id="mainVideo" controls playsinline style="background: black;"></video>
-      </div>
-      <button id="downloadBtn" class="btn">📥 Download Video</button>
+<div class="container">
+    <div class="logo">Forever 27</div>
+    <div class="subtitle">Design & Crafts</div>
+
+    <div id="loading-section" style="display: block;"><div class="loader"></div><p>Syncing...</p></div>
+
+    <div id="upload-section">
+        <p>Gift ID: <b id="displayId" style="color: var(--primary);"></b></p>
+        <div class="upload-box" onclick="document.getElementById('fileInput').click()" style="border: 2px dashed #dfe6e9; padding: 2rem; border-radius: 20px; cursor: pointer;">
+            <span>Tap to select video</span>
+            <input type="file" id="fileInput" accept="video/*" style="display:none">
+        </div>
     </div>
 
-    <!-- SENDER VIEW -->
-    <div id="sender" class="hidden">
-      <h2>🎁 Create a Gift</h2>
-      <p>Upload a video message for this QR code.</p>
-      <input type="file" id="fileIn" accept="video/*" style="display:none">
-      <button class="btn" onclick="document.getElementById('fileIn').click()">Choose Video</button>
+    <div id="preview-section">
+        <h3>Confirm Video</h3>
+        <div class="video-wrapper"><video id="localPreview" controls playsinline></video></div>
+        <button class="btn" onclick="uploadVideo()" id="uploadBtn">Send to Recipient</button>
+        <button class="btn btn-change" id="changeBtn" onclick="document.getElementById('fileInput').click()">Change Video</button>
+        
+        <div id="progress-container"><div id="progress-bar"></div></div>
+        <div id="percentage"></div>
     </div>
 
-    <!-- LOADING VIEW -->
-    <div id="loader">🚀 Uploading... Please wait.</div>
-  </div>
+    <div id="receiver-section">
+        <h3 id="receiver-title">A Gift for You! 🎁</h3>
+        <div id="sync-message">✨ <b>Almost Ready!</b><br>Preparing high-quality playback. Please wait and refresh.</div>
+        <div class="video-wrapper" id="video-container"><video id="cleanVideoPlayer" controls playsinline onerror="handleVideoError()"></video></div>
+        <a id="downloadBtn" href="#" class="btn btn-download">Save to Phone</a>
+        <a id="homeBtn" href="#" class="btn btn-home">Visit Forever 27 Home</a>
+    </div>
 
-  <script>
-    const scriptURL = "https://script.google.com/macros/s/AKfycbzI6s7e4SxsIHMu9gAoXUY26Yxp7Ac4ZfbmA3dnqA0ocEKstivV2fkuDqMclDoL0aJoxA/exec";
-    
-    const urlParams = new URLSearchParams(window.location.search);
-    const giftId = urlParams.get('id');
+    <div id="error-section"><h3>Please Scan QR</h3></div>
+    <div id="status"></div>
+</div>
 
-    async function init() {
-      if (!giftId) {
-        document.getElementById('msg').innerText = "❌ Missing ID in URL (Add ?id=yourid)";
-        return;
-      }
+<script>
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyTwd-FafHoyaYkS7MagEJ13mEzOQb1p5ZATG-4r9fp-6Tgoh0oZlfYUhGAgpSh9pi-SQ/exec"; 
+    const CANVA_SITE_URL = "https://videogifts.my.canva.site"; 
 
-      try {
-        // 1. Check if video exists
-        const response = await fetch(`${scriptURL}?giftId=${giftId}`, {
-          method: "GET",
-          redirect: "follow"
-        });
-        
-        const res = await response.json();
+    const params = new URLSearchParams(window.location.search);
+    const giftId = params.get('id');
+    const statusText = document.getElementById('status');
 
-        if (res.status === "exists") {
-          document.getElementById('downloadProgress').innerText = "Loading video data...";
-          
-          // 2. Fetch the actual video file as a BLOB
-          // This bypasses the Google login screen and allows native playback
-          const videoResponse = await fetch(`https://drive.google.com/uc?export=download&id=${res.fileId}`);
-          
-          if (!videoResponse.ok) throw new Error("Video fetch failed");
-          
-          const blob = await videoResponse.blob();
-          const localUrl = URL.createObjectURL(blob);
-          
-          // 3. Display the video
-          document.getElementById('msg').style.display = 'none';
-          document.getElementById('receiver').classList.remove('hidden');
-          
-          const video = document.getElementById('mainVideo');
-          video.src = localUrl;
-
-          // 4. Setup Download Button (No Google Account needed)
-          const downloadBtn = document.getElementById('downloadBtn');
-          downloadBtn.onclick = function() {
-            const a = document.createElement('a');
-            a.href = localUrl;
-            a.download = `Gift_Video_${giftId}.mp4`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-          };
-
-        } else {
-          document.getElementById('msg').style.display = 'none';
-          document.getElementById('sender').classList.remove('hidden');
-        }
-      } catch (e) {
-        console.error(e);
-        document.getElementById('msg').innerText = "⚠️ Error loading gift. Please refresh.";
-      }
-    }
-
-    // UPLOAD LOGIC
-    document.getElementById('fileIn').onchange = function() {
-      const file = this.files[0];
-      if (!file) return;
-      
-      document.getElementById('sender').classList.add('hidden');
-      document.getElementById('loader').style.display = 'block';
-
-      const reader = new FileReader();
-      reader.onload = async function(e) {
-        const byteData = Array.from(new Uint8Array(e.target.result));
-        
-        const payload = {
-          byteData: byteData,
-          contentType: file.type,
-          giftId: giftId
-        };
-
-        try {
-          await fetch(scriptURL, {
-            method: "POST",
-            body: JSON.stringify(payload),
-            redirect: "follow"
-          });
-          location.reload();
-        } catch (err) {
-          alert("Upload failed. The video might be too large.");
-          location.reload();
-        }
-      };
-      reader.readAsArrayBuffer(file);
+    window.onload = async function() {
+        if (!giftId) { hideAll(); document.getElementById('error-section').style.display = 'block'; return; }
+        checkStatus();
     };
 
-    // Run on start
-    init();
-  </script>
+    async function checkStatus() {
+        try {
+            const response = await fetch(SCRIPT_URL + "?id=" + giftId);
+            const result = await response.json();
+            document.getElementById('loading-section').style.display = 'none';
+            if (result.url) {
+                hideAll(); document.getElementById('receiver-section').style.display = 'block';
+                const fileId = result.url.split('/d/')[1].split('/')[0];
+                const stream = "https://drive.google.com/uc?export=download&id=" + fileId;
+                document.getElementById('cleanVideoPlayer').src = stream;
+                document.getElementById('downloadBtn').href = stream; document.getElementById('downloadBtn').style.display = "block";
+                document.getElementById('homeBtn').href = CANVA_SITE_URL; document.getElementById('homeBtn').style.display = "block";
+            } else {
+                hideAll(); document.getElementById('upload-section').style.display = 'block';
+                document.getElementById('displayId').innerText = "#" + giftId;
+            }
+        } catch (e) { statusText.innerText = "Error."; }
+    }
+
+    document.getElementById('fileInput').onchange = function(e) {
+        const file = e.target.files[0];
+        if (file) { hideAll(); document.getElementById('preview-section').style.display = 'block'; document.getElementById('localPreview').src = URL.createObjectURL(file); }
+    };
+
+    async function uploadVideo() {
+        const fileInput = document.getElementById('fileInput');
+        const file = fileInput.files[0];
+        const uploadBtn = document.getElementById('uploadBtn');
+        const changeBtn = document.getElementById('changeBtn');
+        const progressBar = document.getElementById('progress-bar');
+        const progressContainer = document.getElementById('progress-container');
+        const percentageText = document.getElementById('percentage');
+
+        // Lock Buttons
+        uploadBtn.disabled = true;
+        changeBtn.disabled = true;
+        changeBtn.style.opacity = "0.5";
+        changeBtn.style.pointerEvents = "none";
+        progressContainer.style.display = "block";
+
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const base64Data = e.target.result.split(',')[1];
+            const payload = JSON.stringify({ id: giftId, filename: file.name, mimeType: file.type, data: base64Data });
+
+            const xhr = new XMLHttpRequest();
+            
+            // TRACK PROGRESS
+            xhr.upload.onprogress = function(event) {
+                if (event.lengthComputable) {
+                    const percentComplete = Math.round((event.loaded / event.total) * 100);
+                    progressBar.style.width = percentComplete + "%";
+                    percentageText.innerText = percentComplete + "% Uploaded";
+                    statusText.innerText = "Sending your gift to the cloud...";
+                }
+            };
+
+            xhr.onload = function() {
+                statusText.style.color = "var(--success)";
+                statusText.innerText = "✅ Sent! Redirecting to Forever 27...";
+                setTimeout(() => window.location.replace(CANVA_SITE_URL), 2000);
+            };
+
+            xhr.onerror = function() {
+                statusText.innerText = "❌ Upload failed. Try again.";
+                uploadBtn.disabled = false;
+                changeBtn.disabled = false;
+                changeBtn.style.opacity = "1";
+                changeBtn.style.pointerEvents = "auto";
+            };
+
+            xhr.open("POST", SCRIPT_URL, true);
+            // Note: mode 'no-cors' is not possible with XMLHttpRequest, but since 
+            // we are sending to Apps Script, it should work fine with standard settings.
+            xhr.send(payload);
+        };
+        reader.readAsDataURL(file);
+    }
+
+    function handleVideoError() {
+        document.getElementById('video-container').style.display = "none";
+        document.getElementById('sync-message').style.display = "block";
+    }
+
+    function hideAll() {
+        document.querySelectorAll('.container > div:not(.logo):not(.subtitle):not(#status)').forEach(div => div.style.display = 'none');
+    }
+</script>
 </body>
 </html>
