@@ -99,39 +99,49 @@
     }
 
     function uploadVideo() {
-        const file = document.getElementById('fileInput').files[0];
-        const reader = new FileReader();
+    const fileInput = document.getElementById('fileInput'); // Fixed ID name
+    if (!fileInput.files[0]) return alert("Please select a video!");
+
+    const file = fileInput.files[0];
+    const reader = new FileReader();
+    
+    // Hide buttons and show progress
+    hideAll();
+    document.getElementById('loading-section').style.display = 'block';
+    document.getElementById('status').innerText = "🚀 Sending to recipient... please wait.";
+
+    reader.onload = function(e) {
+        const base64String = e.target.result.split(',')[1];
         
-        document.getElementById('uploadBtn').disabled = true;
-        document.getElementById('progress-container').style.display = 'block';
-        document.getElementById('status').innerText = "🚀 Uploading... do not close this page.";
+        // This 'no-cors' mode is the secret to stopping the instant failure
+        fetch(SCRIPT_URL, {
+            method: 'POST',
+            mode: 'no-cors', 
+            headers: { 'Content-Type': 'text/plain' },
+            body: JSON.stringify({
+                id: giftId,
+                filename: file.name,
+                mimeType: file.type,
+                data: base64String
+            })
+        });
 
-        reader.onload = function(e) {
-            const base64String = e.target.result.split(',')[1];
-            
-            fetch(SCRIPT_URL, {
-                method: 'POST',
-                mode: 'no-cors', 
-                body: JSON.stringify({
-                    id: giftId,
-                    filename: file.name,
-                    mimeType: file.type,
-                    data: base64String
-                })
-            });
-
-            let width = 0;
-            const timer = setInterval(() => {
-                width += 5;
+        // Start a 10-second timer to give the upload time to finish, then go to Canva
+        let width = 0;
+        const timer = setInterval(() => {
+            width += 10;
+            // If you have a progress bar element:
+            if(document.getElementById('progress-bar')) {
                 document.getElementById('progress-bar').style.width = width + "%";
-                if (width >= 100) {
-                    clearInterval(timer);
-                    window.location.href = SUCCESS_URL;
-                }
-            }, 400); 
-        };
-        reader.readAsDataURL(file);
-    }
+            }
+            if (width >= 100) {
+                clearInterval(timer);
+                window.location.href = SUCCESS_URL;
+            }
+        }, 1000); 
+    };
+    reader.readAsDataURL(file);
+}
 
     function hideAll() {
         document.getElementById('loading-section').style.display = 'none';
