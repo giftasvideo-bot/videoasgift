@@ -1,55 +1,11 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Forever 27 - Video Gift</title>
-    <style>
-        body { font-family: sans-serif; text-align: center; padding: 20px; background: #f4f4f4; }
-        .container { background: white; padding: 30px; border-radius: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); max-width: 400px; margin: auto; }
-        #progressBarContainer { width: 100%; background: #ddd; border-radius: 10px; margin: 20px 0; display: none; }
-        #progressBar { width: 0%; height: 10px; background: #27ae60; border-radius: 10px; transition: width 0.3s; }
-        button { background: #27ae60; color: white; border: none; padding: 12px 25px; border-radius: 5px; cursor: pointer; font-size: 16px; width: 100%; }
-        .hidden { display: none; }
-        #statusMessage { margin-top: 15px; font-weight: bold; color: #555; }
-        video { width: 100%; border-radius: 10px; margin-top: 10px; }
-    </style>
-</head>
-<body>
-
-<div class="container">
-    <img src="https://via.placeholder.com/150x50?text=Forever+27" alt="Forever 27" style="width: 150px; margin-bottom: 20px;">
-    
-    <h2 id="displayId">Syncing...</h2>
-
-    <div id="uploadSection" class="hidden">
-        <p>No video found for this gift yet.<br><strong>Upload yours now:</strong></p>
-        <input type="file" id="videoInput" accept="video/*">
-        <button onclick="uploadVideo()">Upload Video</button>
-    </div>
-
-    <div id="viewSection" class="hidden">
-        <p>Your video gift is ready!</p>
-        <video id="videoPlayer" controls autoplay>
-            Your browser does not support the video tag.
-        </video>
-    </div>
-
-    <div id="progressBarContainer">
-        <div id="progressBar"></div>
-    </div>
-    
-    <p id="statusMessage"></p>
-</div>
-
 <script>
     const urlParams = new URLSearchParams(window.location.search);
     const giftId = urlParams.get('id');
-    // MAKE SURE THIS IS YOUR LATEST DEPLOYMENT URL
-    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxbuY3b1i9pO9mMksOMYc3PlxfFrQlU1Glo7osxKVxE9Z51S1umoQCSDc9hjEygpDnrlQ/exec"; 
+    
+    // PASTE YOUR NEW DEPLOYMENT URL HERE
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbw71Q9wIJWnSO2-vfySXk_QCBcRlWuLPnjkFXrJBB4fMfaD7zi5ou2vjIuSujx_RNzkvg/exec"; 
     const SUCCESS_URL = "https://videogifts.my.canva.site";
 
-    // THIS PART WAS MISSING: It runs when the page opens
     window.onload = function() {
         if (!giftId) {
             document.getElementById('displayId').innerText = "❌ No ID Found";
@@ -57,17 +13,20 @@
         }
         document.getElementById('displayId').innerText = "Gift ID: " + giftId;
 
+        // Check if video already exists
         fetch(`${SCRIPT_URL}?id=${giftId}`)
             .then(res => res.json())
             .then(data => {
-                if (data.url) {
+                if (data.url && data.url !== "") {
                     document.getElementById('viewSection').classList.remove('hidden');
                     document.getElementById('videoPlayer').src = data.url;
+                    document.getElementById('displayId').innerText = "Your Gift is Ready!";
                 } else {
                     document.getElementById('uploadSection').classList.remove('hidden');
                 }
             })
             .catch(() => {
+                // If Google is slow, just show the upload button anyway
                 document.getElementById('uploadSection').classList.remove('hidden');
             });
     };
@@ -81,14 +40,16 @@
         
         document.getElementById('uploadSection').style.display = 'none';
         document.getElementById('progressBarContainer').style.display = 'block';
-        document.getElementById('statusMessage').innerText = "🚀 Sending your gift... please wait.";
+        document.getElementById('statusMessage').innerText = "🚀 Processing your video... please wait.";
 
         reader.onload = function(e) {
             const base64String = e.target.result.split(',')[1];
             
+            // FIRE: Send data and ignore the browser's "security failure" signal
             fetch(SCRIPT_URL, {
                 method: 'POST',
                 mode: 'no-cors', 
+                headers: { 'Content-Type': 'text/plain' },
                 body: JSON.stringify({
                     id: giftId,
                     filename: file.name,
@@ -97,19 +58,18 @@
                 })
             });
 
-            // Simulate progress and redirect
+            // FORGET: Instead of waiting for a "Failed" message, we start a countdown
             let width = 0;
-            const interval = setInterval(() => {
-                width += 10;
+            const timer = setInterval(() => {
+                width += 5;
                 document.getElementById('progressBar').style.width = width + "%";
                 if (width >= 100) {
-                    clearInterval(interval);
+                    clearInterval(timer);
+                    // Move to Canva regardless of what the browser says
                     window.location.href = SUCCESS_URL;
                 }
-            }, 700); 
+            }, 500); // This takes 10 seconds total
         };
         reader.readAsDataURL(file);
     }
 </script>
-</body>
-</html>
