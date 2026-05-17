@@ -18,17 +18,10 @@
         
         .btn { background: var(--primary); color: white; border: none; padding: 1.1rem; border-radius: 50px; font-weight: 600; width: 100%; cursor: pointer; font-size: 1rem; text-decoration: none; display: inline-block; box-sizing: border-box; margin-bottom: 10px; transition: 0.3s; }
         .btn-change { background: #636e72; font-size: 0.9rem; padding: 0.8rem; }
-        .btn-download { background: var(--success); display: none; }
-        .btn-home { background: var(--home); display: none; }
-        .btn:disabled { background: #b2bec3; opacity: 0.7; }
         
-        /* PROGRESS BAR STYLING */
         #progress-container { display: none; width: 100%; background-color: #eee; border-radius: 50px; height: 12px; margin-top: 15px; overflow: hidden; }
         #progress-bar { width: 0%; height: 100%; background-color: var(--primary); transition: width 0.3s; }
-        #percentage { font-size: 1rem; font-weight: bold; color: var(--primary); margin-top: 10px; }
-
-        #status { margin-top: 1.5rem; font-size: 0.9rem; font-weight: 600; min-height: 1.2em; }
-        #sync-message { display:none; background: #f1f0ff; color: #6c5ce7; padding: 20px; border-radius: 20px; border: 1px solid #6c5ce7; margin-bottom: 20px; text-align: left; }
+        #status { margin-top: 1.5rem; font-size: 0.9rem; font-weight: 600; color: #555; }
     </style>
 </head>
 <body>
@@ -37,13 +30,13 @@
     <div class="logo">Forever 27</div>
     <div class="subtitle">Design & Crafts</div>
 
-    <div id="loading-section" style="display: block;"><div class="loader"></div><p>Syncing...</p></div>
+    <div id="loading-section" style="display: block;"><p>Syncing...</p></div>
 
     <div id="upload-section">
         <p>Gift ID: <b id="displayId" style="color: var(--primary);"></b></p>
         <div class="upload-box" onclick="document.getElementById('fileInput').click()" style="border: 2px dashed #dfe6e9; padding: 2rem; border-radius: 20px; cursor: pointer;">
             <span>Tap to select video</span>
-            <input type="file" id="fileInput" accept="video/*" style="display:none">
+            <input type="file" id="fileInput" accept="video/*" style="display:none" onchange="previewVideo()">
         </div>
     </div>
 
@@ -51,18 +44,14 @@
         <h3>Confirm Video</h3>
         <div class="video-wrapper"><video id="localPreview" controls playsinline></video></div>
         <button class="btn" onclick="uploadVideo()" id="uploadBtn">Send to Recipient</button>
-        <button class="btn btn-change" id="changeBtn" onclick="document.getElementById('fileInput').click()">Change Video</button>
-        
+        <button class="btn btn-change" onclick="document.getElementById('fileInput').click()">Change Video</button>
         <div id="progress-container"><div id="progress-bar"></div></div>
-        <div id="percentage"></div>
     </div>
 
     <div id="receiver-section">
-        <h3 id="receiver-title">A Gift for You! 🎁</h3>
-        <div id="sync-message">✨ <b>Almost Ready!</b><br>Preparing high-quality playback. Please wait and refresh.</div>
-        <div class="video-wrapper" id="video-container"><video id="cleanVideoPlayer" controls playsinline onerror="handleVideoError()"></video></div>
-        <a id="downloadBtn" href="#" class="btn btn-download">Save to Phone</a>
-        <a id="homeBtn" href="#" class="btn btn-home">Visit Forever 27 Home</a>
+        <h3>A Gift for You! 🎁</h3>
+        <div class="video-wrapper"><video id="cleanVideoPlayer" controls playsinline></video></div>
+        <a href="https://videogifts.my.canva.site" class="btn">Visit Forever 27 Home</a>
     </div>
 
     <div id="error-section"><h3>Please Scan QR</h3></div>
@@ -75,43 +64,54 @@
     const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxbuY3b1i9pO9mMksOMYc3PlxfFrQlU1Glo7osxKVxE9Z51S1umoQCSDc9hjEygpDnrlQ/exec"; 
     const SUCCESS_URL = "https://videogifts.my.canva.site";
 
-  window.onload = function() {
-        if (!giftId) return;
-        document.getElementById('displayId').innerText = "Gift ID: " + giftId;
+    window.onload = function() {
+        if (!giftId) {
+            hideAll();
+            document.getElementById('error-section').style.display = 'block';
+            return;
+        }
+        document.getElementById('displayId').innerText = giftId;
+
         fetch(`${SCRIPT_URL}?id=${giftId}`)
             .then(res => res.json())
             .then(data => {
+                hideAll();
                 if (data.url) {
-                    document.getElementById('viewSection').classList.remove('hidden');
-                    document.getElementById('videoPlayer').src = data.url;
+                    document.getElementById('receiver-section').style.display = 'block';
+                    document.getElementById('cleanVideoPlayer').src = data.url;
                 } else {
-                    document.getElementById('uploadSection').classList.remove('hidden');
+                    document.getElementById('upload-section').style.display = 'block';
                 }
             })
             .catch(() => {
-                document.getElementById('uploadSection').classList.remove('hidden');
+                hideAll();
+                document.getElementById('upload-section').style.display = 'block';
             });
     };
 
-    function uploadVideo() {
-        const fileInput = document.getElementById('videoInput');
-        if (!fileInput.files[0]) return alert("Please select a video!");
+    function previewVideo() {
+        const file = document.getElementById('fileInput').files[0];
+        if (file) {
+            hideAll();
+            document.getElementById('preview-section').style.display = 'block';
+            document.getElementById('localPreview').src = URL.createObjectURL(file);
+        }
+    }
 
-        const file = fileInput.files[0];
+    function uploadVideo() {
+        const file = document.getElementById('fileInput').files[0];
         const reader = new FileReader();
         
-        document.getElementById('uploadSection').style.display = 'none';
-        document.getElementById('progressBarContainer').style.display = 'block';
-        document.getElementById('statusMessage').innerText = "🚀 Processing your video... please wait.";
+        document.getElementById('uploadBtn').disabled = true;
+        document.getElementById('progress-container').style.display = 'block';
+        document.getElementById('status').innerText = "🚀 Uploading... do not close this page.";
 
         reader.onload = function(e) {
             const base64String = e.target.result.split(',')[1];
             
-            // FIRE & FORGET: We send the data and don't even check if it 'failed'
             fetch(SCRIPT_URL, {
                 method: 'POST',
-                mode: 'no-cors', // This is the shield against CORS errors
-                headers: { 'Content-Type': 'text/plain' },
+                mode: 'no-cors', 
                 body: JSON.stringify({
                     id: giftId,
                     filename: file.name,
@@ -120,27 +120,25 @@
                 })
             });
 
-            // We move to the success page after 10 seconds, assuming it worked
             let width = 0;
             const timer = setInterval(() => {
                 width += 5;
-                document.getElementById('progressBar').style.width = width + "%";
+                document.getElementById('progress-bar').style.width = width + "%";
                 if (width >= 100) {
                     clearInterval(timer);
                     window.location.href = SUCCESS_URL;
                 }
-            }, 500); 
+            }, 400); 
         };
         reader.readAsDataURL(file);
     }
 
-    function handleVideoError() {
-        document.getElementById('video-container').style.display = "none";
-        document.getElementById('sync-message').style.display = "block";
-    }
-
     function hideAll() {
-        document.querySelectorAll('.container > div:not(.logo):not(.subtitle):not(#status)').forEach(div => div.style.display = 'none');
+        document.getElementById('loading-section').style.display = 'none';
+        document.getElementById('upload-section').style.display = 'none';
+        document.getElementById('preview-section').style.display = 'none';
+        document.getElementById('receiver-section').style.display = 'none';
+        document.getElementById('error-section').style.display = 'none';
     }
 </script>
 </body>
