@@ -83,36 +83,46 @@
     };
 
     function uploadVideo() {
-        const fileInput = document.getElementById('fileInput'); // FIXED ID
-        const file = fileInput.files[0];
-        if (!file) return alert("Select a video!");
+    const fileInput = document.getElementById('fileInput'); // Ensure this ID matches your HTML
+    const file = fileInput.files[0];
+    if (!file) return alert("Please select a video first!");
 
-        const reader = new FileReader();
-        hideAll();
-        document.getElementById('loading-section').style.display = 'block';
-        document.getElementById('status').innerText = "🚀 Sending your gift...";
+    const reader = new FileReader();
+    
+    // UI Feedback
+    hideAll(); 
+    document.getElementById('loading-section').style.display = 'block';
+    document.getElementById('status').innerText = "🚀 Preparing your gift...";
 
-        reader.onload = function(e) {
-            const base64String = e.target.result.split(',')[1];
-            
-            fetch(SCRIPT_URL, {
-                method: 'POST',
-                mode: 'no-cors', // Bypasses the "Upload Failed" security error
-                body: JSON.stringify({
-                    id: giftId,
-                    filename: file.name,
-                    mimeType: file.type,
-                    data: base64String
-                })
-            });
+    reader.onload = function(e) {
+        const base64String = e.target.result.split(',')[1];
+        
+        // Create a secret form and submit it
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = SCRIPT_URL; // Your Google Script URL
 
-            // Forced success redirect after 10 seconds
-            setTimeout(() => {
-                window.location.href = SUCCESS_URL;
-            }, 10000); 
+        const fields = {
+            fileData: base64String,
+            fileName: file.name,
+            mimeType: file.type,
+            giftId: giftId
         };
-        reader.readAsDataURL(file);
-    }
+
+        for (const key in fields) {
+            const input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = key;
+            input.value = fields[key];
+            form.appendChild(input);
+        }
+
+        document.body.appendChild(form);
+        document.getElementById('status').innerText = "📤 Uploading to Drive...";
+        form.submit(); // This sends the data and handles the redirect
+    };
+    reader.readAsDataURL(file);
+}
 
     function hideAll() {
         const sections = ['loading-section', 'upload-section', 'preview-section', 'receiver-section', 'error-section'];
