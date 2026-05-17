@@ -13,7 +13,6 @@
         .hidden { display: none; }
         #statusMessage { margin-top: 15px; font-weight: bold; color: #555; }
         video { width: 100%; border-radius: 10px; margin-top: 10px; }
-        input[type="file"] { margin-bottom: 20px; }
     </style>
 </head>
 <body>
@@ -31,7 +30,7 @@
 
     <div id="viewSection" class="hidden">
         <p>Your video gift is ready!</p>
-        <video id="videoPlayer" controls>
+        <video id="videoPlayer" controls autoplay>
             Your browser does not support the video tag.
         </video>
     </div>
@@ -42,11 +41,36 @@
     
     <p id="statusMessage"></p>
 </div>
+
 <script>
     const urlParams = new URLSearchParams(window.location.search);
     const giftId = urlParams.get('id');
-    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbw71Q9wIJWnSO2-vfySXk_QCBcRlWuLPnjkFXrJBB4fMfaD7zi5ou2vjIuSujx_RNzkvg/exec"; 
+    // MAKE SURE THIS IS YOUR LATEST DEPLOYMENT URL
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxbuY3b1i9pO9mMksOMYc3PlxfFrQlU1Glo7osxKVxE9Z51S1umoQCSDc9hjEygpDnrlQ/exec"; 
     const SUCCESS_URL = "https://videogifts.my.canva.site";
+
+    // THIS PART WAS MISSING: It runs when the page opens
+    window.onload = function() {
+        if (!giftId) {
+            document.getElementById('displayId').innerText = "❌ No ID Found";
+            return;
+        }
+        document.getElementById('displayId').innerText = "Gift ID: " + giftId;
+
+        fetch(`${SCRIPT_URL}?id=${giftId}`)
+            .then(res => res.json())
+            .then(data => {
+                if (data.url) {
+                    document.getElementById('viewSection').classList.remove('hidden');
+                    document.getElementById('videoPlayer').src = data.url;
+                } else {
+                    document.getElementById('uploadSection').classList.remove('hidden');
+                }
+            })
+            .catch(() => {
+                document.getElementById('uploadSection').classList.remove('hidden');
+            });
+    };
 
     function uploadVideo() {
         const fileInput = document.getElementById('videoInput');
@@ -55,18 +79,16 @@
         const file = fileInput.files[0];
         const reader = new FileReader();
         
-        // Change UI to show progress
         document.getElementById('uploadSection').style.display = 'none';
+        document.getElementById('progressBarContainer').style.display = 'block';
         document.getElementById('statusMessage').innerText = "🚀 Sending your gift... please wait.";
 
         reader.onload = function(e) {
             const base64String = e.target.result.split(',')[1];
             
-            // We use 'no-cors' to bypass the error message you've been seeing
             fetch(SCRIPT_URL, {
                 method: 'POST',
                 mode: 'no-cors', 
-                headers: { 'Content-Type': 'text/plain' },
                 body: JSON.stringify({
                     id: giftId,
                     filename: file.name,
@@ -75,14 +97,19 @@
                 })
             });
 
-            // Force a redirect after 7 seconds regardless of browser errors
-            setTimeout(() => {
-                window.location.href = SUCCESS_URL;
-            }, 7000);
+            // Simulate progress and redirect
+            let width = 0;
+            const interval = setInterval(() => {
+                width += 10;
+                document.getElementById('progressBar').style.width = width + "%";
+                if (width >= 100) {
+                    clearInterval(interval);
+                    window.location.href = SUCCESS_URL;
+                }
+            }, 700); 
         };
         reader.readAsDataURL(file);
     }
 </script>
-
 </body>
 </html>
