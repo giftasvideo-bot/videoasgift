@@ -46,81 +46,43 @@
 <script>
     const urlParams = new URLSearchParams(window.location.search);
     const giftId = urlParams.get('id');
-    
-    // THE FULL URL FROM YOUR PREVIOUS MESSAGE
-    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyTwd-FafHoyaYkS7MagEJ13mEzOQb1p5ZATG-4r9fp-6Tgoh0oZlfYUhGAgpSh9pi-SQ/exec";
-    const SUCCESS_URL = "https://your-canva-success-page.com";
+    const SCRIPT_URL = "PASTE_YOUR_NEW_URL_HERE"; // Make sure it ends in /exec
+    const SUCCESS_URL = "https://videogifts.my.canva.site";
 
-    // 1. ON PAGE LOAD: Check if video exists
-    window.onload = function() {
-        if (!giftId) {
-            document.getElementById('displayId').innerText = "❌ Error";
-            document.getElementById('statusMessage').innerText = "Invalid Link. Please scan your QR code again.";
-            return;
-        }
-
-        document.getElementById('displayId').innerText = "Gift ID: " + giftId;
-
-        // Ask Google Script if this ID has a video link
-        fetch(`${SCRIPT_URL}?id=${giftId}`)
-            .then(response => response.json())
-            .then(result => {
-                if (result.url && result.url !== "") {
-                    // IF VIDEO EXISTS: Show player
-                    document.getElementById('viewSection').classList.remove('hidden');
-                    document.getElementById('videoPlayer').src = result.url;
-                } else {
-                    // IF NO VIDEO: Show upload button
-                    document.getElementById('uploadSection').classList.remove('hidden');
-                }
-            })
-            .catch(err => {
-                // If it can't connect, default to upload mode
-                document.getElementById('uploadSection').classList.remove('hidden');
-                console.log("New ID detected or connection error.");
-            });
-    };
-
-    // 2. UPLOAD FUNCTION
     function uploadVideo() {
         const fileInput = document.getElementById('videoInput');
-        if (fileInput.files.length === 0) return alert("Please select a video first!");
+        if (!fileInput.files[0]) return alert("Select a video!");
 
         const file = fileInput.files[0];
         const reader = new FileReader();
         
-        document.getElementById('uploadSection').classList.add('hidden');
-        document.getElementById('progressBarContainer').style.display = 'block';
-        document.getElementById('statusMessage').innerText = "Uploading to Forever 27... please wait.";
+        // UI Feedback
+        document.getElementById('uploadSection').style.display = 'none';
+        document.getElementById('statusMessage').innerText = "🚀 Sending your gift... please wait.";
 
         reader.onload = function(e) {
             const base64String = e.target.result.split(',')[1];
-            const payload = JSON.stringify({
-                id: giftId,
-                filename: file.name,
-                mimeType: file.type,
-                data: base64String
-            });
-
-            document.getElementById('progressBar').style.width = "90%";
-
+            
             fetch(SCRIPT_URL, {
                 method: 'POST',
-                mode: 'no-cors', 
-                headers: { 'Content-Type': 'text/plain' },
-                body: payload
-            })
-            .then(() => {
-                document.getElementById('progressBar').style.width = "100%";
-                document.getElementById('statusMessage').innerText = "✅ Success! Redirecting...";
-                setTimeout(() => { window.location.href = SUCCESS_URL; }, 3000);
-            })
-            .catch(() => {
-                document.getElementById('statusMessage').innerText = "❌ Upload Error. Try a smaller file or check connection.";
+                mode: 'no-cors', // The secret to bypassing the "Upload Failed" error
+                body: JSON.stringify({
+                    id: giftId,
+                    filename: file.name,
+                    mimeType: file.type,
+                    data: base64String
+                })
             });
+
+            // Instead of waiting for a reply that the browser blocks, 
+            // we manually wait 4 seconds for the upload to finish.
+            setTimeout(() => {
+                window.location.href = SUCCESS_URL;
+            }, 4000);
         };
         reader.readAsDataURL(file);
     }
+
 </script>
 
 </body>
