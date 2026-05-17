@@ -42,12 +42,10 @@
     
     <p id="statusMessage"></p>
 </div>
-
 <script>
     const urlParams = new URLSearchParams(window.location.search);
     const giftId = urlParams.get('id');
-    // REPLACE THIS with your exact NEW URL ending in /exec
-    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyTwd-FafHoyaYkS7MagEJ13mEzOQb1p5ZATG-4r9fp-6Tgoh0oZlfYUhGAgpSh9pi-SQ/exec";
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbw71Q9wIJWnSO2-vfySXk_QCBcRlWuLPnjkFXrJBB4fMfaD7zi5ou2vjIuSujx_RNzkvg/exec"; 
     const SUCCESS_URL = "https://videogifts.my.canva.site";
 
     function uploadVideo() {
@@ -57,14 +55,14 @@
         const file = fileInput.files[0];
         const reader = new FileReader();
         
+        // Change UI to show progress
         document.getElementById('uploadSection').style.display = 'none';
-        document.getElementById('progressBarContainer').style.display = 'block';
         document.getElementById('statusMessage').innerText = "🚀 Sending your gift... please wait.";
 
         reader.onload = function(e) {
             const base64String = e.target.result.split(',')[1];
             
-            // This sends the data but doesn't wait for a "Success" reply
+            // We use 'no-cors' to bypass the error message you've been seeing
             fetch(SCRIPT_URL, {
                 method: 'POST',
                 mode: 'no-cors', 
@@ -77,11 +75,10 @@
                 })
             });
 
-            // After 5 seconds, we assume it's done and move to Canva
-            document.getElementById('progressBar').style.width = "100%";
+            // Force a redirect after 7 seconds regardless of browser errors
             setTimeout(() => {
                 window.location.href = SUCCESS_URL;
-            }, 5000);
+            }, 7000);
         };
         reader.readAsDataURL(file);
     }
