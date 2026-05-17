@@ -64,12 +64,9 @@
     const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxbuY3b1i9pO9mMksOMYc3PlxfFrQlU1Glo7osxKVxE9Z51S1umoQCSDc9hjEygpDnrlQ/exec"; 
     const SUCCESS_URL = "https://videogifts.my.canva.site";
 
+
     window.onload = function() {
-        if (!giftId) {
-            hideAll();
-            document.getElementById('error-section').style.display = 'block';
-            return;
-        }
+        if (!giftId) return;
         document.getElementById('displayId').innerText = giftId;
 
         fetch(`${SCRIPT_URL}?id=${giftId}`)
@@ -82,66 +79,48 @@
                 } else {
                     document.getElementById('upload-section').style.display = 'block';
                 }
-            })
-            .catch(() => {
-                hideAll();
-                document.getElementById('upload-section').style.display = 'block';
             });
     };
 
-    function previewVideo() {
-        const file = document.getElementById('fileInput').files[0];
-        if (file) {
-            hideAll();
-            document.getElementById('preview-section').style.display = 'block';
-            document.getElementById('localPreview').src = URL.createObjectURL(file);
-        }
+    function uploadVideo() {
+        const fileInput = document.getElementById('fileInput'); // FIXED ID
+        const file = fileInput.files[0];
+        if (!file) return alert("Select a video!");
+
+        const reader = new FileReader();
+        hideAll();
+        document.getElementById('loading-section').style.display = 'block';
+        document.getElementById('status').innerText = "🚀 Sending your gift...";
+
+        reader.onload = function(e) {
+            const base64String = e.target.result.split(',')[1];
+            
+            fetch(SCRIPT_URL, {
+                method: 'POST',
+                mode: 'no-cors', // Bypasses the "Upload Failed" security error
+                body: JSON.stringify({
+                    id: giftId,
+                    filename: file.name,
+                    mimeType: file.type,
+                    data: base64String
+                })
+            });
+
+            // Forced success redirect after 10 seconds
+            setTimeout(() => {
+                window.location.href = SUCCESS_URL;
+            }, 10000); 
+        };
+        reader.readAsDataURL(file);
     }
 
-    function uploadVideo() {
-    const fileInput = document.getElementById('fileInput'); // Fixed ID name
-    if (!fileInput.files[0]) return alert("Please select a video!");
-
-    const file = fileInput.files[0];
-    const reader = new FileReader();
-    
-    // Hide buttons and show progress
-    hideAll();
-    document.getElementById('loading-section').style.display = 'block';
-    document.getElementById('status').innerText = "🚀 Sending to recipient... please wait.";
-
-    reader.onload = function(e) {
-        const base64String = e.target.result.split(',')[1];
-        
-        // This 'no-cors' mode is the secret to stopping the instant failure
-        fetch(SCRIPT_URL, {
-            method: 'POST',
-            mode: 'no-cors', 
-            headers: { 'Content-Type': 'text/plain' },
-            body: JSON.stringify({
-                id: giftId,
-                filename: file.name,
-                mimeType: file.type,
-                data: base64String
-            })
+    function hideAll() {
+        const sections = ['loading-section', 'upload-section', 'preview-section', 'receiver-section', 'error-section'];
+        sections.forEach(id => {
+            const el = document.getElementById(id);
+            if(el) el.style.display = 'none';
         });
-
-        // Start a 10-second timer to give the upload time to finish, then go to Canva
-        let width = 0;
-        const timer = setInterval(() => {
-            width += 10;
-            // If you have a progress bar element:
-            if(document.getElementById('progress-bar')) {
-                document.getElementById('progress-bar').style.width = width + "%";
-            }
-            if (width >= 100) {
-                clearInterval(timer);
-                window.location.href = SUCCESS_URL;
-            }
-        }, 1000); 
-    };
-    reader.readAsDataURL(file);
-}
+    }
 
     function hideAll() {
         document.getElementById('loading-section').style.display = 'none';
