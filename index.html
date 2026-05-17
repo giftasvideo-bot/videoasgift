@@ -46,26 +46,29 @@
 <script>
     const urlParams = new URLSearchParams(window.location.search);
     const giftId = urlParams.get('id');
-    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyTwd-FafHoyaYkS7MagEJ13mEzOQb1p5ZATG-4r9fp-6Tgoh0oZlfYUhGAgpSh9pi-SQ/exec"; // Make sure it ends in /exec
+    // REPLACE THIS with your exact NEW URL ending in /exec
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyTwd-FafHoyaYkS7MagEJ13mEzOQb1p5ZATG-4r9fp-6Tgoh0oZlfYUhGAgpSh9pi-SQ/exec";
     const SUCCESS_URL = "https://videogifts.my.canva.site";
 
     function uploadVideo() {
         const fileInput = document.getElementById('videoInput');
-        if (!fileInput.files[0]) return alert("Select a video!");
+        if (!fileInput.files[0]) return alert("Please select a video!");
 
         const file = fileInput.files[0];
         const reader = new FileReader();
         
-        // UI Feedback
         document.getElementById('uploadSection').style.display = 'none';
+        document.getElementById('progressBarContainer').style.display = 'block';
         document.getElementById('statusMessage').innerText = "🚀 Sending your gift... please wait.";
 
         reader.onload = function(e) {
             const base64String = e.target.result.split(',')[1];
             
+            // This sends the data but doesn't wait for a "Success" reply
             fetch(SCRIPT_URL, {
                 method: 'POST',
-                mode: 'no-cors', // The secret to bypassing the "Upload Failed" error
+                mode: 'no-cors', 
+                headers: { 'Content-Type': 'text/plain' },
                 body: JSON.stringify({
                     id: giftId,
                     filename: file.name,
@@ -74,15 +77,14 @@
                 })
             });
 
-            // Instead of waiting for a reply that the browser blocks, 
-            // we manually wait 4 seconds for the upload to finish.
+            // After 5 seconds, we assume it's done and move to Canva
+            document.getElementById('progressBar').style.width = "100%";
             setTimeout(() => {
                 window.location.href = SUCCESS_URL;
-            }, 4000);
+            }, 5000);
         };
         reader.readAsDataURL(file);
     }
-
 </script>
 
 </body>
