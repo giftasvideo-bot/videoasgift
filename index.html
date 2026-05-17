@@ -1,51 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Forever 27 | Video Gift Portal</title>
+    <style>
+        :root { --primary: #6c5ce7; --bg: #f8f9fa; --success: #00b894; --home: #2d3436; }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; padding: 15px; box-sizing: border-box; }
+        .container { background: white; width: 100%; max-width: 450px; padding: 2.5rem; border-radius: 30px; box-shadow: 0 20px 40px rgba(0,0,0,0.1); text-align: center; }
+        .logo { font-weight: bold; color: var(--primary); font-size: 1.8rem; margin-bottom: 0.5rem; }
+        .subtitle { color: #636e72; margin-bottom: 1.5rem; font-size: 0.9rem; }
+        
+        #upload-section, #receiver-section, #error-section, #loading-section, #preview-section { display: none; }
+
+        .video-wrapper { position: relative; width: 100%; background: #000; border-radius: 20px; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.2); margin-bottom: 20px; }
+        video { width: 100%; display: block; object-fit: contain; min-height: 250px; }
+        
+        .btn { background: var(--primary); color: white; border: none; padding: 1.1rem; border-radius: 50px; font-weight: 600; width: 100%; cursor: pointer; font-size: 1rem; text-decoration: none; display: inline-block; box-sizing: border-box; margin-bottom: 10px; transition: 0.3s; }
+        .btn-change { background: #636e72; font-size: 0.9rem; padding: 0.8rem; }
+        .btn-download { background: var(--success); display: none; }
+        .btn-home { background: var(--home); display: none; }
+        .btn:disabled { background: #b2bec3; opacity: 0.7; }
+        
+        /* PROGRESS BAR STYLING */
+        #progress-container { display: none; width: 100%; background-color: #eee; border-radius: 50px; height: 12px; margin-top: 15px; overflow: hidden; }
+        #progress-bar { width: 0%; height: 100%; background-color: var(--primary); transition: width 0.3s; }
+        #percentage { font-size: 1rem; font-weight: bold; color: var(--primary); margin-top: 10px; }
+
+        #status { margin-top: 1.5rem; font-size: 0.9rem; font-weight: 600; min-height: 1.2em; }
+        #sync-message { display:none; background: #f1f0ff; color: #6c5ce7; padding: 20px; border-radius: 20px; border: 1px solid #6c5ce7; margin-bottom: 20px; text-align: left; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="logo">Forever 27</div>
+    <div class="subtitle">Design & Crafts</div>
+
+    <div id="loading-section" style="display: block;"><div class="loader"></div><p>Syncing...</p></div>
+
+    <div id="upload-section">
+        <p>Gift ID: <b id="displayId" style="color: var(--primary);"></b></p>
+        <div class="upload-box" onclick="document.getElementById('fileInput').click()" style="border: 2px dashed #dfe6e9; padding: 2rem; border-radius: 20px; cursor: pointer;">
+            <span>Tap to select video</span>
+            <input type="file" id="fileInput" accept="video/*" style="display:none">
+        </div>
+    </div>
+
+    <div id="preview-section">
+        <h3>Confirm Video</h3>
+        <div class="video-wrapper"><video id="localPreview" controls playsinline></video></div>
+        <button class="btn" onclick="uploadVideo()" id="uploadBtn">Send to Recipient</button>
+        <button class="btn btn-change" id="changeBtn" onclick="document.getElementById('fileInput').click()">Change Video</button>
+        
+        <div id="progress-container"><div id="progress-bar"></div></div>
+        <div id="percentage"></div>
+    </div>
+
+    <div id="receiver-section">
+        <h3 id="receiver-title">A Gift for You! 🎁</h3>
+        <div id="sync-message">✨ <b>Almost Ready!</b><br>Preparing high-quality playback. Please wait and refresh.</div>
+        <div class="video-wrapper" id="video-container"><video id="cleanVideoPlayer" controls playsinline onerror="handleVideoError()"></video></div>
+        <a id="downloadBtn" href="#" class="btn btn-download">Save to Phone</a>
+        <a id="homeBtn" href="#" class="btn btn-home">Visit Forever 27 Home</a>
+    </div>
+
+    <div id="error-section"><h3>Please Scan QR</h3></div>
+    <div id="status"></div>
+</div>
+
 <script>
     const urlParams = new URLSearchParams(window.location.search);
     const giftId = urlParams.get('id');
-    
-    // PASTE YOUR NEW DEPLOYMENT URL HERE
-    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbw71Q9wIJWnSO2-vfySXk_QCBcRlWuLPnjkFXrJBB4fMfaD7zi5ou2vjIuSujx_RNzkvg/exec"; 
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxbuY3b1i9pO9mMksOMYc3PlxfFrQlU1Glo7osxKVxE9Z51S1umoQCSDc9hjEygpDnrlQ/exec"; 
     const SUCCESS_URL = "https://videogifts.my.canva.site";
 
     window.onload = function() {
-        if (!giftId) {
-            document.getElementById('displayId').innerText = "❌ No ID Found";
-            return;
-        }
+        if (!giftId) return;
         document.getElementById('displayId').innerText = "Gift ID: " + giftId;
-
-        // Check if video already exists
-        fetch(`${SCRIPT_URL}?id=${giftId}`)
-            .then(res => res.json())
-            .then(data => {
-                if (data.url && data.url !== "") {
-                    document.getElementById('viewSection').classList.remove('hidden');
-                    document.getElementById('videoPlayer').src = data.url;
-                    document.getElementById('displayId').innerText = "Your Gift is Ready!";
-                } else {
-                    document.getElementById('uploadSection').classList.remove('hidden');
-                }
-            })
-            .catch(() => {
-                // If Google is slow, just show the upload button anyway
+        fetch(`${SCRIPT_URL}?id=${giftId}`).then(res => res.json()).then(data => {
+            if (data.url) {
+                document.getElementById('viewSection').classList.remove('hidden');
+                document.getElementById('videoPlayer').src = data.url;
+            } else {
                 document.getElementById('uploadSection').classList.remove('hidden');
-            });
+            }
+        }).catch(() => document.getElementById('uploadSection').classList.remove('hidden'));
     };
 
     function uploadVideo() {
         const fileInput = document.getElementById('videoInput');
-        if (!fileInput.files[0]) return alert("Please select a video!");
+        if (!fileInput.files[0]) return alert("Select a video!");
 
         const file = fileInput.files[0];
         const reader = new FileReader();
         
         document.getElementById('uploadSection').style.display = 'none';
         document.getElementById('progressBarContainer').style.display = 'block';
-        document.getElementById('statusMessage').innerText = "🚀 Processing your video... please wait.";
+        document.getElementById('statusMessage').innerText = "🚀 Processing your Forever 27 gift...";
 
         reader.onload = function(e) {
             const base64String = e.target.result.split(',')[1];
             
-            // FIRE: Send data and ignore the browser's "security failure" signal
+            // This 'no-cors' mode is what stops the "fast" error message
             fetch(SCRIPT_URL, {
                 method: 'POST',
                 mode: 'no-cors', 
@@ -58,18 +115,28 @@
                 })
             });
 
-            // FORGET: Instead of waiting for a "Failed" message, we start a countdown
+            // Instead of waiting for a "Failed" signal, we use a 10-second countdown
             let width = 0;
             const timer = setInterval(() => {
-                width += 5;
+                width += 10;
                 document.getElementById('progressBar').style.width = width + "%";
                 if (width >= 100) {
                     clearInterval(timer);
-                    // Move to Canva regardless of what the browser says
-                    window.location.href = SUCCESS_URL;
+                    window.location.href = SUCCESS_URL; // Go to Canva no matter what
                 }
-            }, 500); // This takes 10 seconds total
+            }, 1000); 
         };
         reader.readAsDataURL(file);
     }
+
+    function handleVideoError() {
+        document.getElementById('video-container').style.display = "none";
+        document.getElementById('sync-message').style.display = "block";
+    }
+
+    function hideAll() {
+        document.querySelectorAll('.container > div:not(.logo):not(.subtitle):not(#status)').forEach(div => div.style.display = 'none');
+    }
 </script>
+</body>
+</html>
